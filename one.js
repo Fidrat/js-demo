@@ -7,18 +7,55 @@ const armySize = 10;
 
 var content = '';
 
+// @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator
+// ! infinite generator exemple
+function* idMaker() {
+    var index = 0;
+    while(true)
+        yield index++;
+}
+
+const idGenerator = idMaker();
 
 // Orc obj constructor
-function Orc(lastName){  
+function Orc(lastName){
+    var me = this;
+    // ! Using const inside the Orc object "id" become like a private immutable variable
+    const id = idGenerator.next().value;
+    
     this.firstName = setOrcName();
     this.lastName = lastName ? lastName : setOrcName();
     
-    // ! Arrow syntax 1 : Shorter syntax
     this.getFullName = () => this.firstName + ' ' + this.lastName; 
-    // Non arrow equivalent
-    // this.getFullName = function(){
-    //     return this.firstName + ' ' + this.lastName;
-    // };
+    this.getId = () => id; // getter for "private id"
+    
+    var speechGenerator = orcSpeech();
+    
+    // ! Generator function, finite generator exemple
+    function* orcSpeech(){
+        yield "Ur house will burn in the name of the " + me.lastName + " clan.";
+        yield "Hungry! Lunch yet?";
+        yield me.firstName + " will chew ur eyes!";
+    }
+    
+    // ! Recursive member function using the above generator
+    this.talk = function(target, next = speechGenerator.next()){
+        console.log(next);
+        
+        if(!next.done){
+            target.innerHTML = me.getFullName() + " say:<br>- " + next.value;
+            
+            
+            setTimeout( function(){
+                me.talk(target, speechGenerator.next());
+            }, 2000 );
+        }else{
+            target.innerHTML = '';
+            speechGenerator = orcSpeech(); // Reinstantiate generator so we can have the same orc talk again
+        }
+        
+    };
+
     
 };
 
@@ -40,36 +77,40 @@ function main(){
     for(let i=0; i < armySize; i++){
         orcArmy[i] = new Orc(); 
     }
-    
-    // Instantiating the variable "orc" with let
-    let orc = orcArmy[0];
-    
-    // Reusing the same let variable "orc" to loop through orcs -- let limits this "orc" variable scope's to this block
+
     // for ... of simple loop : The for...of statement creates a loop iterating over iterable objects 
     for(let orc of orcArmy){
-        content += orc.getFullName() + '<br>';
+        content += '#' + orc.getId() + ': ' + orc.getFullName() + '<br>';
     }
 
-    // The orc variable is still containing the first orc of the orcArmy array.
-    content += "<br> The first orc is : " + orc.getFullName();
+    orcArmy[0].talk( document.getElementById('dynamicContent') ) ;
+    //console.log(orcArmy);
 
     // Write content to the browser
     document.getElementById('content').innerHTML = content;
+    
+     /************** events ***************/
+    var btn = document.getElementById('dynamicContent2-trigger');
+    btn.addEventListener('click', function() {
+        //orcArmy[getRandomInt(orcArmy.length,1)].talk(document.getElementById('dynamicContent2') ) ;
+        orcArmy[3].talk(document.getElementById('dynamicContent2') ) ;
+    });
+    
 }
+// END OF MAIN
 
 // Equivalent to jQuery $(document).ready() in vanilla js
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function() {    
      main();
 });
 
 
 
-/************** utils ***************/
-/**
- * ! Functions and variables are hoisted : 
- * Hoisting is a JavaScript mechanism where variables and function declarations are moved to the top of their scope before code execution.
- */
 
+
+
+
+/************** utils ***************/
 function getRandomInt(max, min=0){
     return Math.floor(Math.random() * (max - min)) + min;
 };
