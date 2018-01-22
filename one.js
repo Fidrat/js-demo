@@ -43,12 +43,20 @@ function Orc(lastName){
         console.log(next);
         
         if(!next.done){
-            target.innerHTML = me.getFullName() + " say:<br>- " + next.value;
+            target.innerHTML = me.getFullName() + " say:<br>- ";
+            let text = next.value;
+            let timer = 0;
             
+            //! We can use for ... of loop on a string since it is an iterable object in js
+            for(let char of text){
+                setTimeout( function(){
+                   target.innerHTML += char;
+                }, 50*(timer++) );
+            }
             
             setTimeout( function(){
                 me.talk(target, speechGenerator.next());
-            }, 2000 );
+            }, 3000 );
         }else{
             target.innerHTML = '';
             speechGenerator = orcSpeech(); // Reinstantiate generator so we can have the same orc talk again
