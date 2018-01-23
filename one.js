@@ -16,7 +16,7 @@ function* idMaker() {
 }
 
 const idGenerator = idMaker();
-const familyIdGenerator = idMaker(); // ! adding a new id generator to ensure we have separate id chains
+const familyIdGenerator = idMaker();
 
 // Orcish family manager
 function OrcFamily(){
@@ -26,36 +26,43 @@ function OrcFamily(){
     this.getId = () => id; // getter for "private id"
     this.getName = () => name; // getter for "private name"
 }
-
-// Orc obj constructor
-function Orc(lastName){
+/**
+* Orc obj constructor
+* @param orcFamily object optionnal. Orc will be orphan if orcFamily is ommited.
+*/
+function Orc(orcFamily = null){
     const id = idGenerator.next().value;
 
+    this.isTalking = false;
     this.firstName = setOrcName();
-    this.lastName = lastName ? lastName : setOrcName();
+    this.family = orcFamily;
+    this.getLastName = orcFamily ? orcFamily.getName() : '';
 
-    this.getFullName = () => this.firstName + ' ' + this.lastName;
+    this.getFullName = () => this.firstName + ' ' + this.getLastName;
     this.getId = () => id; // getter for "private id"
 
     var speechGenerator = orcSpeech(this);
 
     // Finite generator exemple
     function* orcSpeech(orc){
-        yield "Ur house will burn in the name of the " + orc.lastName + " clan.";
+        if(orc.family){ // we skip the first sentence if the Orc is an orphan
+            yield "Ur house will burn in the name of the " + orc.getLastName + " clan.";
+        }else{
+            yield orc.firstName + " don't need a family.";
+        }
         yield "Hungry! Lunch yet?";
         yield orc.firstName + " will chew ur eyes!";
     }
 
     // Make an orc talk
     this.talk = (target, next = speechGenerator.next()) =>{
-        console.log(next);
+        this.isTalking = true;
 
         if(!next.done){
-            target.innerHTML = this.getFullName() + " say:<br>- ";
+            target.innerHTML = "";
             let text = next.value;
             let timer = 0;
 
-            //! We can use for ... of loop on a string since it is an iterable object in js
             for(let char of text){
                 setTimeout( () => {
                    target.innerHTML += char;
@@ -66,7 +73,9 @@ function Orc(lastName){
                 this.talk(target, speechGenerator.next());
             }, 3000 );
         }else{
-            target.innerHTML = '';
+            this.isTalking = false;
+            // ! equivalent of jQuery .remove()
+            target.remove();
             speechGenerator = orcSpeech(this); // Reinstantiate generator so we can have the same orc talk again
         }
     };
@@ -75,41 +84,60 @@ function Orc(lastName){
 
 // MAIN
 function main(){
-    // ! Creating a map filled with the orcish families
-    var orcVillage = new Map();
-    var orcArmy = [];
+    var orcVillage = new Map(); // a map of the Orcish individuals
+    var orcArmy = new Map(); // a map of Orcish families
 
     for(let i = 0; i < orcishFamilyNumber; i++ ){
         let orcFamily = new OrcFamily();
         orcVillage.set( orcFamily.getId(), orcFamily);
     }
 
-    // ! using Map.size property as we would use array.length
-    content += '<p>The orc village consist of ' + orcVillage.size + ' orcish families</p>';
+    content += '<p>The Orc village consist of ' + orcVillage.size + ' orcish families</p>';
 
-    // ! we can use forEach loops on maps
     orcVillage.forEach(function(value, key) {
         content += 'Orcish family #' + key + ' generated -> ' + value.getName() + '<br>';
     });
 
-    content += '<hr><p> List of Orcish individuals : </p>';
+    content += '<hr><p> List of clickable orcish individuals : </p>';
 
+    // Generate Orcs and associate them a random family
     for(let i=0; i < armySize; i++){
-        let orc = orcArmy[i] = new Orc(orcVillage.get( getRandomInt( orcVillage.size ) ).getName() );
-        content += '#' + orc.getId() + ': ' + orc.getFullName() + '<br>';
+        let orc = new Orc(orcVillage.get( getRandomInt( orcVillage.size ) ) );
+        orcArmy.set(orc.getId(), orc);
+        content += '<a class="orc" data-id="' + orc.getId() + '"><u>#' + orc.getId() + ': ' + orc.getFullName() + '</u></a><br>';
     }
+
+    // Adding an Orc orphan to the orcArmy array
+    let orc = new Orc();
+    orcArmy.set(orc.getId(), orc);
+    content += '<a class="orc" data-id="' + orc.getId() + '"><u>#' + orc.getId() + ': ' + orc.getFullName() + '</u></a><br>';
 
     // Write content to the browser
     document.getElementById('content').innerHTML = content;
 
+    // ! equivalent to jQuery class (.) selector
+    var elems = document.getElementsByClassName('orc');
+    for(let elem of elems){ // ! kind of jQuery .each()
+        // ! Avoiding jQuery css()
+        elem.style.cssText = "color: blue"; // ! Will overwrite the inline style attribute
+        elem.style.cursor = "pointer"; // ! Will write in inline style attribute, overwriting "cursor" only
+    }
      /************** events ***************/
-    var btn = document.getElementById('dynamicContent2-trigger');
-    btn.addEventListener('click', function() {
-        orcArmy[getRandomInt(orcArmy.length,1)].talk(document.getElementById('dynamicContent2') ) ;
-    });
 
-}
-// END OF MAIN
+
+    for(let elem of elems){
+        elem.addEventListener('click', function() { // ! avoiding jQuery .on()
+            let orc = orcArmy.get( parseInt( elem.getAttribute('data-id') ) );
+            if(orc.isTalking){ // ! Ensuring an orc can only talk when he's not already talking
+                return;
+            }
+            // ! create a <p> on the fly after the clicked element
+            let target = elem.parentNode.insertBefore(document.createElement('p'), elem.nextSibling);
+            orc.talk( target ) ;
+        });
+    }
+
+} // END OF MAIN
 
 // Equivalent to jQuery $(document).ready() in vanilla js
 document.addEventListener("DOMContentLoaded", function() {
@@ -123,6 +151,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 /************** utils ***************/
+// return a random int from min (included) to max (exluded)
 function getRandomInt(max, min=0){
     return Math.floor(Math.random() * (max - min)) + min;
 };
