@@ -7,8 +7,7 @@ const armySize = 10;
 
 var content = '';
 
-// @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator
-// ! infinite generator exemple
+// Return an auto incremented id
 function* idMaker() {
     var index = 0;
     while(true)
@@ -19,8 +18,9 @@ const idGenerator = idMaker();
 
 // Orc obj constructor
 function Orc(lastName){
-    var me = this;
-    // ! Using const inside the Orc object "id" become like a private immutable variable
+    // ! Here we are using the arrow syntax to avoid holding the value of this as a property.
+    //var me = this;
+    
     const id = idGenerator.next().value;
     
     this.firstName = setOrcName();
@@ -29,21 +29,21 @@ function Orc(lastName){
     this.getFullName = () => this.firstName + ' ' + this.lastName; 
     this.getId = () => id; // getter for "private id"
     
-    var speechGenerator = orcSpeech();
+    var speechGenerator = orcSpeech(this);
     
-    // ! Generator function, finite generator exemple
-    function* orcSpeech(){
-        yield "Ur house will burn in the name of the " + me.lastName + " clan.";
+    // ! Finite generator exemple we added an orc object parameter since we can't use the arrow annotation with generators
+    function* orcSpeech(orc){
+        yield "Ur house will burn in the name of the " + orc.lastName + " clan.";
         yield "Hungry! Lunch yet?";
-        yield me.firstName + " will chew ur eyes!";
+        yield orc.firstName + " will chew ur eyes!";
     }
     
-    // ! Recursive member function using the above generator
-    this.talk = function(target, next = speechGenerator.next()){
+    // ! With the arrow syntax, the this is not redefined and is still set to the parent Orc object
+    this.talk = (target, next = speechGenerator.next()) =>{
         console.log(next);
         
         if(!next.done){
-            target.innerHTML = me.getFullName() + " say:<br>- ";
+            target.innerHTML = this.getFullName() + " say:<br>- ";
             let text = next.value;
             let timer = 0;
             
@@ -54,12 +54,12 @@ function Orc(lastName){
                 }, 50*(timer++) );
             }
             
-            setTimeout( function(){
-                me.talk(target, speechGenerator.next());
+            setTimeout( () => {
+                this.talk(target, speechGenerator.next());
             }, 3000 );
         }else{
             target.innerHTML = '';
-            speechGenerator = orcSpeech(); // Reinstantiate generator so we can have the same orc talk again
+            speechGenerator = orcSpeech(this); // Reinstantiate generator so we can have the same orc talk again
         }
         
     };
