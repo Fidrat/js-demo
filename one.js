@@ -25,38 +25,43 @@ function OrcFamily(){
 
     this.getId = () => id; // getter for "private id"
     this.getName = () => name; // getter for "private name"
-}
+}; // end of OrcFamily
+
 /**
 * Orc obj constructor
 * @param orcFamily object optionnal. Orc will be orphan if orcFamily is ommited.
 */
 function Orc(orcFamily = null){
+    // Utils
     const id = idGenerator.next().value;
-
-    this.isTalking = false;
-    this.firstName = setOrcName();
-    this.family = orcFamily;
-    this.getLastName = orcFamily ? orcFamily.getName() : '';
-
-    this.getFullName = () => this.firstName + ' ' + this.getLastName;
-    this.getId = () => id; // getter for "private id"
-
     var speechGenerator = orcSpeech(this);
+    // Properties
+    var talking = false;
+    var firstName = setOrcName();
+    var family = orcFamily;
+
+    // Getters
+    this.getFirstName = () => firstName;
+    this.getFamily = () => orcFamily;
+    this.getLastName = () => orcFamily ? this.getFamily().getName() : '';
+    this.isTalking = () => talking;
+    this.getFullName = () => this.getFirstName() + ' ' + this.getLastName();
+    this.getId = () => id;
 
     // Finite generator exemple
     function* orcSpeech(orc){
-        if(orc.family){ // we skip the first sentence if the Orc is an orphan
-            yield "Ur house will burn in the name of the " + orc.getLastName + " clan.";
+        if(orc.getFamily()){ // we skip the first sentence if the Orc is an orphan
+            yield "Ur house will burn in the name of the " + orc.getLastName() + " clan.";
         }else{
-            yield orc.firstName + " don't need a family.";
+            yield orc.getFirstName() + " don't need a family.";
         }
         yield "Hungry! Lunch yet?";
-        yield orc.firstName + " will chew ur eyes!";
-    }
+        yield orc.getFirstName() + " will chew ur eyes!";
+    };
 
     // Make an orc talk
-    this.talk = (target, next = speechGenerator.next()) =>{
-        this.isTalking = true;
+    this.talk = (target, next = speechGenerator.next()) => {
+        talking = true;
 
         if(!next.done){
             target.innerHTML = "";
@@ -64,25 +69,20 @@ function Orc(orcFamily = null){
             let timer = 0;
 
             for(let char of text){
-                setTimeout( () => {
-                   target.innerHTML += char;
-                }, 50*(timer++) );
+                setTimeout( () => { target.innerHTML += char; }, 50*(timer++) );
             }
+            setTimeout( () => { this.talk(target, speechGenerator.next()); }, 3000 );
 
-            setTimeout( () => {
-                this.talk(target, speechGenerator.next());
-            }, 3000 );
-        }else{
-            this.isTalking = false;
-            // ! equivalent of jQuery .remove()
-            target.remove();
+        }else{ // Talkin's done
+            talking = false; // ! Orc is ready to talk again
+            target.remove(); // ! Equivalent of jQuery .remove()
             speechGenerator = orcSpeech(this); // Reinstantiate generator so we can have the same orc talk again
         }
     };
-};
+}; // end of Orc
 
 
-// MAIN
+/********************* MAIN ********************/
 function main(){
     var orcVillage = new Map(); // a map of the Orcish individuals
     var orcArmy = new Map(); // a map of Orcish families
@@ -122,13 +122,13 @@ function main(){
         elem.style.cssText = "color: blue"; // ! Will overwrite the inline style attribute
         elem.style.cursor = "pointer"; // ! Will write in inline style attribute, overwriting "cursor" only
     }
+
      /************** events ***************/
-
-
     for(let elem of elems){
         elem.addEventListener('click', function() { // ! avoiding jQuery .on()
             let orc = orcArmy.get( parseInt( elem.getAttribute('data-id') ) );
-            if(orc.isTalking){ // ! Ensuring an orc can only talk when he's not already talking
+
+            if( orc.isTalking() ){ // ! Ensuring an orc can only talk when he's not already talking
                 return;
             }
             // ! create a <p> on the fly after the clicked element
@@ -137,7 +137,7 @@ function main(){
         });
     }
 
-} // END OF MAIN
+}; /***************** END OF MAIN ********************/
 
 // Equivalent to jQuery $(document).ready() in vanilla js
 document.addEventListener("DOMContentLoaded", function() {
