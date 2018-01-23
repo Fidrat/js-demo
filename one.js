@@ -3,6 +3,7 @@
 // constants
 const consonant = ['b', 'd', 'f', 'g', 'k', 't', 'p', 'z'];
 const vowel = ['a', 'e', 'i', 'o', 'u', 'y'];
+const orcishFamilyNumber = 3;
 const armySize = 10;
 
 var content = '';
@@ -15,12 +16,19 @@ function* idMaker() {
 }
 
 const idGenerator = idMaker();
+const familyIdGenerator = idMaker(); // ! adding a new id generator to ensure we have separate id chains
+
+// Orcish family manager
+function OrcFamily(){
+    const id = familyIdGenerator.next().value;
+    const name = setOrcName();
+
+    this.getId = () => id; // getter for "private id"
+    this.getName = () => name; // getter for "private name"
+}
 
 // Orc obj constructor
 function Orc(lastName){
-    // ! Here we are using the arrow syntax to avoid holding the value of this as a property.
-    //var me = this;
-
     const id = idGenerator.next().value;
 
     this.firstName = setOrcName();
@@ -31,14 +39,14 @@ function Orc(lastName){
 
     var speechGenerator = orcSpeech(this);
 
-    // ! Finite generator exemple we added an orc object parameter since we can't use the arrow annotation with generators
+    // Finite generator exemple
     function* orcSpeech(orc){
         yield "Ur house will burn in the name of the " + orc.lastName + " clan.";
         yield "Hungry! Lunch yet?";
         yield orc.firstName + " will chew ur eyes!";
     }
 
-    // ! With the arrow syntax, the this is not redefined and is still set to the parent Orc object
+    // Make an orc talk
     this.talk = (target, next = speechGenerator.next()) =>{
         console.log(next);
 
@@ -65,31 +73,31 @@ function Orc(lastName){
 };
 
 
-// Return a random name
-var setOrcName = (m = getRandomInt(5,2)) => {
-    let name = '';
-    for(let i=0; i < m; i++){
-        name += getConsonantVowelPair();
-    }
-    return name.charAt(0).toUpperCase() + name.slice(1);
-};
-
-
 // MAIN
 function main(){
+    // ! Creating a map filled with the orcish families
+    var orcVillage = new Map();
     var orcArmy = [];
 
-    for(let i=0; i < armySize; i++){
-        orcArmy[i] = new Orc();
+    for(let i = 0; i < orcishFamilyNumber; i++ ){
+        let orcFamily = new OrcFamily();
+        orcVillage.set( orcFamily.getId(), orcFamily);
     }
 
-    // for ... of simple loop : The for...of statement creates a loop iterating over iterable objects
-    for(let orc of orcArmy){
+    // ! using Map.size property as we would use array.length
+    content += '<p>The orc village consist of ' + orcVillage.size + ' orcish families</p>';
+
+    // ! we can use forEach loops on maps
+    orcVillage.forEach(function(value, key) {
+        content += 'Orcish family #' + key + ' generated -> ' + value.getName() + '<br>';
+    });
+
+    content += '<hr><p> List of Orcish individuals : </p>';
+
+    for(let i=0; i < armySize; i++){
+        let orc = orcArmy[i] = new Orc(orcVillage.get( getRandomInt( orcVillage.size ) ).getName() );
         content += '#' + orc.getId() + ': ' + orc.getFullName() + '<br>';
     }
-
-    orcArmy[0].talk( document.getElementById('dynamicContent') ) ;
-    //console.log(orcArmy);
 
     // Write content to the browser
     document.getElementById('content').innerHTML = content;
@@ -97,8 +105,7 @@ function main(){
      /************** events ***************/
     var btn = document.getElementById('dynamicContent2-trigger');
     btn.addEventListener('click', function() {
-        //orcArmy[getRandomInt(orcArmy.length,1)].talk(document.getElementById('dynamicContent2') ) ;
-        orcArmy[3].talk(document.getElementById('dynamicContent2') ) ;
+        orcArmy[getRandomInt(orcArmy.length,1)].talk(document.getElementById('dynamicContent2') ) ;
     });
 
 }
@@ -122,4 +129,13 @@ function getRandomInt(max, min=0){
 
 function getConsonantVowelPair(){
     return consonant[ getRandomInt(consonant.length) ] + vowel[ getRandomInt(vowel.length) ];
+};
+
+// Return a random name
+var setOrcName = (m = getRandomInt(5,2)) => {
+    let name = '';
+    for(let i=0; i < m; i++){
+        name += getConsonantVowelPair();
+    }
+    return name.charAt(0).toUpperCase() + name.slice(1);
 };
