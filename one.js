@@ -49,7 +49,7 @@ function Orc(lastName){
 
             //! We can use for ... of loop on a string since it is an iterable object in js
             for(let char of text){
-                setTimeout( function(){
+                setTimeout( () => {
                    target.innerHTML += char;
                 }, 50*(timer++) );
             }
